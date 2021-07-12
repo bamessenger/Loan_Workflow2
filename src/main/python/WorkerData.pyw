@@ -357,7 +357,7 @@ class DataWorker(QRunnable):
         self.signals.output.emit('Timestamp '+ self.wdfileName +'......Done')
         self.signals.tskComplete.emit(1)
         workbookRpt.Save()
-        workbookRpt.close()
+        workbookRpt.Close()
         excel.Quit()
         self.signals.output.emit(
             self.wdfileName + ' saved and closed......Done')
