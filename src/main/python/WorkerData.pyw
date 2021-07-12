@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import pathlib as p
 import win32com.client as win32
-import pythoncom
 from datetime import datetime
 from PyQt5.QtWidgets import QMessageBox
 from time import sleep
@@ -358,6 +357,7 @@ class DataWorker(QRunnable):
         self.signals.output.emit('Timestamp '+ self.wdfileName +'......Done')
         self.signals.tskComplete.emit(1)
         workbookRpt.Save()
+        workbookRpt.close()
         excel.Quit()
         self.signals.output.emit(
             self.wdfileName + ' saved and closed......Done')
