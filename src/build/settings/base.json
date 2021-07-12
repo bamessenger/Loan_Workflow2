@@ -2,5 +2,5 @@
     "app_name": "Loan_Workflow",
     "author": "Brandon Messenger",
     "main_module": "src/main/python/main.pyw",
-    "version": "3.3.2"
+    "version": "3.3.3"
 }
