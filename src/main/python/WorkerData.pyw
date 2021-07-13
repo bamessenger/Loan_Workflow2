@@ -152,18 +152,11 @@ class DataWorker(QRunnable):
 
     def dashData(self, wrkflwDataPath, wrkflwRptPath):
         # Open Workbook up and allow functions to compile
-        try:
-            excel = win32.gencache.EnsureDispatch('Excel.Application')
-            workbook = excel.Workbooks.Open(wrkflwDataPath)
-            workbook.Save()
-            workbook.Close()
-            #excel.Quit()
-        except COMException as error:
-            self.msgBox.setIcon(QMessageBox.Critical)
-            self.msgBox.setText(str(error))
-            self.msgBox.setWindowTitle("Excel Error")
-            self.msgBox.setStandardButtons(QMessageBox.Ok)
-            self.msgBox.exec()
+        excel = win32.gencache.EnsureDispatch('Excel.Application')
+        workbook = excel.Workbooks.Open(wrkflwDataPath)
+        workbook.Save()
+        workbook.Close()
+        excel.Quit()
         self.signals.output.emit(
             'Open ' + self.wdfileName +
             ' to allow functions to compile......Done')
@@ -329,7 +322,8 @@ class DataWorker(QRunnable):
         # Create tblEncompassTaskList
         self.encmpDataTaskList = self.encmpDataAllDash2[(self.encmpDataAllDash2['MilestoneOrder'] != 99) &
                                                         (self.encmpDataAllDash2['LoanStatus'] == 'Open')]
-        self.encmpDataTaskList = pd.merge(left=self.encmpDataTaskList, how='left', right=self.encmpDataLastComp, on=['LoanNumber'])
+        self.encmpDataTaskList = pd.merge(left=self.encmpDataTaskList, how='left',
+                                          right=self.encmpDataLastComp, on=['LoanNumber'])
         self.encmpDataTaskList.to_excel(writer, sheet_name='tblEncompassTaskList',
                                         startcol=1, index=False)
         sheet = wrkbk.get_sheet_by_name('tblEncompassTaskList')
@@ -345,16 +339,23 @@ class DataWorker(QRunnable):
         wrkbk.save(wrkflwDataPath)
         wrkbk.close()
         # Open DailyWorkflowRpting.xlsx to be fully updated with DailyWorkflowData.xlsx data
+        # program will pause until Queries are done refreshing
+        excel = win32.gencache.EnsureDispatch('Excel.Application')
         workbookRpt = excel.Workbooks.Open(wrkflwRptPath)
         workbookRpt.RefreshAll()
         excel.CalculateUntilAsyncQueriesDone()
         self.signals.output.emit('Refresh Queries......Done')
         self.signals.tskComplete.emit(1)
+        workbookRpt.Save()
+        workbookRpt.Close()
+        excel.Quit()
         # Datestamp DailyWorkflowRpting workbook
+        excel = win32.gencache.EnsureDispatch('Excel.Application')
+        workbookRpt = excel.Workbooks.Open(wrkflwRptPath)
         self.wrfileName = p.Path(wrkflwRptPath).stem
         wrkShtSettings = workbookRpt.Worksheets('settings')
         wrkShtSettings.Cells(2, 5).Value = datetime.today()
-        self.signals.output.emit('Timestamp '+ self.wdfileName +'......Done')
+        self.signals.output.emit('Timestamp ' + self.wdfileName + '......Done')
         self.signals.tskComplete.emit(1)
         workbookRpt.Save()
         workbookRpt.Close()
