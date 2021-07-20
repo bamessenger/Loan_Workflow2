@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import pathlib as p
 import win32com.client as win32
-from datetime import datetime
+from datetime import date
 from PyQt5.QtWidgets import QMessageBox
 from time import sleep
 from openpyxl import load_workbook
@@ -42,23 +42,24 @@ class WorkerManager(QObject):
 
 class DataWorker(QRunnable):
     # Worker for the data transfer of Encompass data
-    def __init__(self, ePath, wdPath, wrPath):
+    def __init__(self, ePath, wdPath, wrPath, dfltProc):
         super().__init__()
         # create unique identifier for each worker
         self.jobID = str(uuid.uuid4().hex)
         self.efile = ePath
         self.wdfile = wdPath
         self.wrfile = wrPath
+        self.defaultProc = dfltProc
         self.signals = WorkerSignals()
         self.msgBox = QMessageBox()
 
     def run(self):
         self.signals.currentStatus.emit('Running')
-        self.fileRead(encompPath=self.efile)
+        self.fileRead(encompPath=self.efile, lpName=self.defaultProc)
         self.excelWrite(wrkflwDataPath=self.wdfile)
         self.dashData(wrkflwDataPath=self.wdfile, wrkflwRptPath=self.wrfile)
 
-    def fileRead(self, encompPath):
+    def fileRead(self, encompPath, lpName):
         self.encmpDataAll = pd.read_excel(encompPath, engine='openpyxl')
         self.efileName = p.Path(encompPath).stem
         self.encmpDataAll.columns = self.encmpDataAll.columns.str.replace(
@@ -78,6 +79,7 @@ class DataWorker(QRunnable):
                                   'OS-FinancingContingency',
                                   'LockExpirationDate', 'EstClosingDate',
                                   'FundingFundsSentDate']].apply(pd.to_datetime)
+        self.encmpDataAllAct['LoanProcessor'] = self.encmpDataAllAct['LoanProcessor'].replace(r'^\s+$', lpName, regex=True)
         # Calculate Net working days
         # self.encmpDataAllAct['NetWorkDays'] = np.where(self.encmpDataAllAct['LoanStatus'] == 'Closed',
         #             (np.busday_count(self.encmpDataAllAct['ApplicationDate'].values.astype('datetime64[D]'),
@@ -324,6 +326,7 @@ class DataWorker(QRunnable):
                                                         (self.encmpDataAllDash2['LoanStatus'] == 'Open')]
         self.encmpDataTaskList = pd.merge(left=self.encmpDataTaskList, how='left',
                                           right=self.encmpDataLastComp, on=['LoanNumber'])
+        self.encmpDataTaskList = self.encmpDataTaskList.assign(Notes=' ')
         self.encmpDataTaskList.to_excel(writer, sheet_name='tblEncompassTaskList',
                                         startcol=1, index=False)
         sheet = wrkbk.get_sheet_by_name('tblEncompassTaskList')
@@ -354,7 +357,9 @@ class DataWorker(QRunnable):
         workbookRpt = excel.Workbooks.Open(wrkflwRptPath)
         self.wrfileName = p.Path(wrkflwRptPath).stem
         wrkShtSettings = workbookRpt.Worksheets('settings')
-        wrkShtSettings.Cells(2, 5).Value = datetime.today()
+        today = date.today()
+        dateFmatted = today.strftime("%m/%d/%Y")
+        wrkShtSettings.Cells(2, 5).Value = dateFmatted
         self.signals.output.emit('Timestamp ' + self.wdfileName + '......Done')
         self.signals.tskComplete.emit(1)
         workbookRpt.Save()

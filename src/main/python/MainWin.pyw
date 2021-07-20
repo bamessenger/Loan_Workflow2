@@ -127,7 +127,7 @@ class MainWindowUI(QtWidgets.QMainWindow):
 
     def startDataWorker(self):
         w = DataWorker(ePath=self.encompFile, wdPath=self.wrkflwDataFile,
-                       wrPath=self.wrkflwRptFile)
+                       wrPath=self.wrkflwRptFile, dfltProc=self.ui.lneDfltLoanProc.text())
         w.signals.output.connect(self.progressDialogue)
         w.signals.completed.connect(self.completedProc)
         w.signals.currentStatus.connect(self.currStatDialogue)
